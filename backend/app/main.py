@@ -6,6 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
 from app.api.routes.books import router as books_router
+from app.api.routes.profiles import router as profiles_router
+from app.api.routes.concepts import router as concepts_router
+from app.api.routes.plans import router as plans_router
 from app.core.errors import MathPathError, mathpath_error_handler
 from app.core.logging import setup_logging
 from app.core.network import print_local_ip
@@ -32,3 +35,6 @@ app.add_exception_handler(MathPathError, mathpath_error_handler)
 
 app.include_router(health_router, prefix="/api")
 app.include_router(books_router, prefix="/api")
+app.include_router(profiles_router, prefix="/api")
+app.include_router(concepts_router, prefix="/api")
+app.include_router(plans_router, prefix="/api")
