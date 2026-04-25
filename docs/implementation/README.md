@@ -1,18 +1,40 @@
 # MathPath MVP — Implementation Docs
 
 > **Goal:** Turn any uploaded math textbook into a stable, textbook-grounded daily learning path.
+>
+> **Open-source, self-hosted:** User clones the repo, adds one API key, runs `docker compose up`, and connects their phone.
 
 Each file below is a self-contained implementation spec for one milestone. They are ordered by dependency — build them in sequence.
 
 ---
 
+## Quick Start (for end users)
+
+```bash
+git clone https://github.com/you/mathpath.git
+cd mathpath
+cp .env.example .env        # Edit: paste your OpenAI/Anthropic/Gemini key
+docker compose up            # Starts Postgres + API
+# Open phone app → enter laptop IP shown in terminal → done
+```
+
+See [B00_open_source_setup.md](B00_open_source_setup.md) for full details.
+
+---
+
 ## Build Order
+
+### Setup
+
+| # | Milestone | File | Depends On |
+|---|-----------|------|------------|
+| B00 | Open-Source Setup | [B00_open_source_setup.md](B00_open_source_setup.md) | — |
 
 ### Backend (B01–B15)
 
 | # | Milestone | File | Depends On |
 |---|-----------|------|------------|
-| B01 | Project Skeleton | [B01_project_skeleton.md](B01_project_skeleton.md) | — |
+| B01 | Project Skeleton | [B01_project_skeleton.md](B01_project_skeleton.md) | B00 |
 | B02 | Data Models & Migrations | [B02_data_models.md](B02_data_models.md) | B01 |
 | B03 | Text Ingestion | [B03_text_ingestion.md](B03_text_ingestion.md) | B01, B02 |
 | B04 | LLM Client Abstraction | [B04_llm_abstraction.md](B04_llm_abstraction.md) | B01 |
@@ -58,10 +80,24 @@ Each file below is a self-contained implementation spec for one milestone. They 
 
 ## Recommended Workflow
 
-1. Work through backend milestones B01–B15 in order.
-2. Validate each milestone with its acceptance criteria before moving on.
-3. After B15 (pipeline works end-to-end via CLI), start frontend F01–F09.
-4. Test each frontend milestone against the running backend.
+1. Start with B00 (Docker Compose, Dockerfile, .env.example).
+2. Work through backend milestones B01–B15 in order.
+3. Validate each milestone with its acceptance criteria before moving on.
+4. After B15 (pipeline works end-to-end via CLI), start frontend F01–F09.
+5. Test each frontend milestone against the running backend on a real phone.
+
+### Self-hosted architecture
+
+```text
+User's Laptop (docker compose up)        User's Phone
+┌────────────────────────────┐           ┌────────────────┐
+│  Postgres + pgvector       │    WiFi   │  MathPath App  │
+│  FastAPI (0.0.0.0:8000)   │◄──────────│  Settings:     │
+│  .env: one LLM API key    │           │  192.168.x.x   │
+└────────────────────────────┘           └────────────────┘
+```
+
+No cloud, no deployment, no domain. Same WiFi is all you need.
 
 ---
 

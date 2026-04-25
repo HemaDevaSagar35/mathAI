@@ -25,6 +25,7 @@ mobile/
   app/
     _layout.tsx          → Root layout (navigation container, theme provider)
     index.tsx            → Home / entry redirect
+    connect.tsx          → Server connection screen (FIRST screen for new users)
     onboarding.tsx       → Onboarding screen (placeholder)
     upload.tsx           → Upload screen (placeholder)
     books/
@@ -59,26 +60,110 @@ export default function RootLayout() {
 }
 ```
 
-### 4. API client — `src/api/client.ts`
+### 4. Server connection screen — `app/connect.tsx`
+
+This is the **first screen** a new user sees. It connects the phone to the self-hosted backend.
+
+```text
+┌──────────────────────────────┐
+│                              │
+│       ◈ MathPath             │
+│                              │
+│  Connect to your server      │
+│                              │
+│  Run `docker compose up` on  │
+│  your computer, then enter   │
+│  the IP shown in the         │
+│  terminal below.             │
+│                              │
+│  Server URL:                 │
+│  ┌────────────────────────┐  │
+│  │ http://192.168.1.42:80 │  │
+│  └────────────────────────┘  │
+│                              │
+│         [Connect]            │
+│                              │
+│  ● Checking...               │
+│  ✓ Connected!                │
+│  ✗ Can't reach server        │
+│                              │
+└──────────────────────────────┘
+```
+
+Behavior:
+1. On first launch, if no saved server URL → show this screen.
+2. User enters URL (e.g., `http://192.168.1.42:8000`).
+3. App calls `GET {url}/api/health`.
+4. On success → save URL to AsyncStorage → navigate to main app.
+5. On failure → show error with troubleshooting tips.
+6. On subsequent launches → skip this screen (URL already saved).
+7. URL is changeable from Settings screen.
+
+### 5. API client with dynamic URL — `src/api/client.ts`
+
+The API client reads the server URL from a Zustand store (backed by AsyncStorage), not a hardcoded env var.
 
 ```typescript
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
+import { useServerStore } from "../stores/serverStore";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+let _client: AxiosInstance | null = null;
 
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: { "Content-Type": "application/json" },
-});
+export function getApiClient(): AxiosInstance {
+  const serverUrl = useServerStore.getState().serverUrl;
+  if (!serverUrl) throw new Error("Server URL not configured");
 
-export async function healthCheck(): Promise<boolean> {
-  const res = await apiClient.get("/health");
-  return res.data.status === "ok";
+  if (!_client || _client.defaults.baseURL !== serverUrl) {
+    _client = axios.create({
+      baseURL: serverUrl,
+      timeout: 30000,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  return _client;
+}
+
+export async function healthCheck(url: string): Promise<boolean> {
+  try {
+    const res = await axios.get(`${url}/api/health`, { timeout: 5000 });
+    return res.data?.status === "ok";
+  } catch {
+    return false;
+  }
 }
 ```
 
-### 5. TanStack Query setup — `src/api/queryClient.ts`
+### 6. Server store — `src/stores/serverStore.ts`
+
+```typescript
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+interface ServerState {
+  serverUrl: string | null;
+  isConnected: boolean;
+  setServerUrl: (url: string) => void;
+  clearServerUrl: () => void;
+}
+
+export const useServerStore = create<ServerState>()(
+  persist(
+    (set) => ({
+      serverUrl: null,
+      isConnected: false,
+      setServerUrl: (url) => set({ serverUrl: url, isConnected: true }),
+      clearServerUrl: () => set({ serverUrl: null, isConnected: false }),
+    }),
+    {
+      name: "mathpath-server",
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+```
+
+### 7. TanStack Query setup — `src/api/queryClient.ts`
 
 ```typescript
 import { QueryClient } from "@tanstack/react-query";
@@ -90,7 +175,7 @@ export const queryClient = new QueryClient({
 });
 ```
 
-### 6. Theme / design tokens — `src/theme/index.ts`
+### 8. Theme / design tokens — `src/theme/index.ts`
 
 ```typescript
 export const theme = {
@@ -112,7 +197,7 @@ export const theme = {
 };
 ```
 
-### 7. Type definitions — `src/types/api.ts`
+### 9. Type definitions — `src/types/api.ts`
 
 ```typescript
 export interface Book {
@@ -135,7 +220,27 @@ export interface ProgressDashboard { ... }
 
 Define all types matching the backend JSON contracts from the plan.
 
-### 8. Tab/bottom navigation
+### 10. Entry redirect — `app/index.tsx`
+
+```typescript
+export default function Index() {
+  const serverUrl = useServerStore((s) => s.serverUrl);
+
+  useEffect(() => {
+    if (!serverUrl) {
+      router.replace("/connect");
+    } else {
+      router.replace("/books");
+    }
+  }, [serverUrl]);
+
+  return <LoadingSpinner />;
+}
+```
+
+If no server URL is saved, redirect to connect screen. Otherwise, go to the main app.
+
+### 11. Tab/bottom navigation
 
 For MVP use a simple bottom tab or stack navigation:
 
@@ -147,10 +252,10 @@ Tabs:
   - Settings
 ```
 
-### 9. Install core dependencies
+### 12. Install core dependencies
 
 ```bash
-npx expo install @tanstack/react-query
+npx expo install @tanstack/react-query @react-native-async-storage/async-storage
 npm install axios zustand
 npx expo install expo-document-picker expo-av expo-notifications
 ```
@@ -163,6 +268,7 @@ npx expo install expo-document-picker expo-av expo-notifications
 mobile/
   app/_layout.tsx
   app/index.tsx
+  app/connect.tsx            ← NEW: server connection screen
   app/onboarding.tsx
   app/upload.tsx
   app/books/index.tsx
@@ -172,8 +278,9 @@ mobile/
   app/tidbits/[tidbitId]/ask.tsx
   app/progress.tsx
   app/settings.tsx
-  src/api/client.ts
+  src/api/client.ts          ← CHANGED: dynamic URL from store
   src/api/queryClient.ts
+  src/stores/serverStore.ts  ← NEW: persisted server URL
   src/types/api.ts
   src/theme/index.ts
 ```
@@ -183,9 +290,14 @@ mobile/
 ## Acceptance Criteria
 
 - [ ] `npx expo start` launches without errors.
+- [ ] First launch shows server connection screen.
+- [ ] Entering a valid server URL and tapping Connect → health check passes → navigates to main app.
+- [ ] Server URL persists across app restarts (AsyncStorage).
+- [ ] Entering an invalid URL shows a clear error.
 - [ ] Can navigate between Upload, Books, Tidbit, Progress, Settings.
-- [ ] API client can call backend `/health` and receive `{"status": "ok"}`.
+- [ ] API client uses the saved server URL for all requests.
 - [ ] TanStack Query is wired and functional.
+- [ ] Settings screen shows current server URL with option to change it.
 - [ ] All placeholder screens render with screen name text.
 
 ---
@@ -195,12 +307,16 @@ mobile/
 ```text
 Create a React Native + Expo project at mathpath/mobile/ with:
 - Expo Router file-based navigation (app/ directory)
-- Screens: index, onboarding, upload, books/index, books/[bookId], tidbits/[tidbitId], tidbits/[tidbitId]/quiz, tidbits/[tidbitId]/ask, progress, settings
-- src/api/client.ts with axios-based API client and healthCheck()
+- Screens: index, connect, onboarding, upload, books/index, books/[bookId], tidbits/[tidbitId], tidbits/[tidbitId]/quiz, tidbits/[tidbitId]/ask, progress, settings
+- app/connect.tsx — server connection screen: URL input, health check, save to AsyncStorage, navigate on success. Show clear instructions about running docker compose up.
+- app/index.tsx — checks for saved server URL, redirects to /connect or /books.
+- src/stores/serverStore.ts — Zustand store with AsyncStorage persistence for serverUrl.
+- src/api/client.ts — dynamic axios client that reads URL from serverStore (NOT hardcoded env var).
 - src/api/queryClient.ts with TanStack Query setup
 - src/types/api.ts with TypeScript interfaces matching backend contracts
 - src/theme/index.ts with design tokens
 - Root _layout.tsx with Stack navigator, QueryClientProvider, ThemeProvider
 - Bottom tab navigation for Home, Books, Progress, Settings
-All screens should be placeholder shells for now.
+- Settings screen shows current server URL with option to change/disconnect.
+All non-connect screens should be placeholder shells for now.
 ```

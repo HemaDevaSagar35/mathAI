@@ -1,0 +1,27 @@
+[project]
+name = "mathpath-backend"
+version = "0.1.0"
+description = "MathPath — AI-powered math learning engine"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg2-binary>=2.9",
+    "python-dotenv>=1.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-multipart>=0.0.9",
+    "pgvector>=0.3",
+    "tiktoken>=0.7",
+    "openai>=1.30",
+    "anthropic>=0.28",
+    "google-generativeai>=0.7",
+    "jsonschema>=4.22",
+    "PyMuPDF>=1.24",
+    "pdfplumber>=0.11",
+]
+
+[tool.uv]
+python-preference = "managed"

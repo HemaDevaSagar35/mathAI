@@ -1,8 +1,8 @@
 # B01 — Project Skeleton
 
-> **Objective:** Stand up a working FastAPI backend with Postgres, Alembic migrations, config management, structured logging, and a health endpoint.
+> **Objective:** Stand up a working FastAPI backend with Postgres, Alembic migrations, config management, structured logging, and a health endpoint. Packaged with Docker Compose for one-command startup.
 
-**Depends on:** Nothing (first milestone)
+**Depends on:** B00 (Docker Compose and .env are set up)
 
 ---
 
@@ -176,11 +176,14 @@ GEMINI_API_KEY=
 
 ## Acceptance Criteria
 
-- [ ] `uvicorn app.main:app --reload` starts without error.
-- [ ] `GET /health` returns `{"status": "ok"}`.
-- [ ] Database connection succeeds (test by calling `engine.connect()`).
+- [ ] `docker compose up` starts Postgres + API from scratch.
+- [ ] `uvicorn app.main:app --host 0.0.0.0 --reload` starts without error.
+- [ ] `GET /api/health` returns `{"status": "ok"}`.
+- [ ] `GET http://<laptop-ip>:8000/api/health` works from a phone on the same WiFi.
+- [ ] Startup log prints local IP address.
+- [ ] Database connection succeeds.
 - [ ] `alembic revision --autogenerate -m "init"` creates a migration.
-- [ ] `alembic upgrade head` runs cleanly.
+- [ ] `alembic upgrade head` runs cleanly (also runs automatically in Docker).
 
 ---
 
