@@ -1,0 +1,81 @@
+Chapter 4: Conditional Probability and Bayes' Theorem
+
+4.1 Conditional Probability
+
+In many applications, we want to compute the probability of an event given that another event has already occurred. This leads to the concept of conditional probability.
+
+Definition 4.1.1. If A and B are events with P(B) > 0, the conditional probability of A given B is defined as:
+
+  P(A | B) = P(A ∩ B) / P(B).
+
+Intuitively, P(A | B) represents the probability of A occurring, given that B has occurred. We restrict our sample space to B and look at the proportion of B that also belongs to A.
+
+Example 4.1.2. A fair six-sided die is rolled. Let A = {the roll is even} = {2, 4, 6} and B = {the roll is at most 4} = {1, 2, 3, 4}. What is P(A | B)?
+
+Solution. P(A ∩ B) = P({2, 4}) = 2/6 = 1/3. P(B) = 4/6 = 2/3. Therefore P(A | B) = (1/3)/(2/3) = 1/2.
+
+This makes sense: given that the roll is at most 4, the possible outcomes are {1, 2, 3, 4}, and exactly two of these (2 and 4) are even.
+
+Example 4.1.3. Two cards are drawn from a standard 52-card deck without replacement. What is the probability that the second card is a heart given that the first card was a heart?
+
+Solution. Let A = {second card is a heart} and B = {first card is a heart}. After drawing one heart, 12 hearts remain among 51 cards. So P(A | B) = 12/51 = 4/17.
+
+4.2 Independence
+
+Definition 4.2.1. Events A and B are independent if P(A ∩ B) = P(A) * P(B). Equivalently (when P(B) > 0), A and B are independent if P(A | B) = P(A) — knowing B occurred does not change the probability of A.
+
+Warning: Independence and mutual exclusivity are different concepts! If A and B are mutually exclusive (A ∩ B = empty set) and both have positive probability, then P(A ∩ B) = 0 != P(A)P(B), so they are not independent.
+
+Example 4.2.2. A fair coin is tossed twice. Let A = {first toss is heads} and B = {second toss is heads}. Then P(A) = 1/2, P(B) = 1/2, P(A ∩ B) = 1/4 = P(A)P(B). So A and B are independent. The outcome of the first toss does not affect the second.
+
+4.3 The Law of Total Probability
+
+Theorem 4.3.1 (Law of Total Probability). Let B_1, B_2, ..., B_n be a partition of the sample space (mutually exclusive, exhaustive events with P(B_i) > 0). Then for any event A:
+
+  P(A) = sum_{i=1}^{n} P(A | B_i) P(B_i).
+
+Proof. Since the B_i partition the sample space, A = A ∩ Omega = A ∩ (B_1 ∪ ... ∪ B_n) = (A ∩ B_1) ∪ ... ∪ (A ∩ B_n), and these are disjoint. So P(A) = sum P(A ∩ B_i) = sum P(A | B_i) P(B_i). QED.
+
+Example 4.3.2. A factory has two machines: Machine I produces 60% of items, Machine II produces 40%. Machine I has a 3% defect rate, Machine II has a 5% defect rate. What is the overall defect rate?
+
+Solution. Let D = {item is defective}, B_1 = {from Machine I}, B_2 = {from Machine II}. Then P(D) = P(D | B_1)P(B_1) + P(D | B_2)P(B_2) = (0.03)(0.60) + (0.05)(0.40) = 0.018 + 0.020 = 0.038. The overall defect rate is 3.8%.
+
+4.4 Bayes' Theorem
+
+Theorem 4.4.1 (Bayes' Theorem). Let B_1, ..., B_n be a partition of the sample space with P(B_i) > 0 for all i. Then for any event A with P(A) > 0:
+
+  P(B_j | A) = P(A | B_j) P(B_j) / sum_{i=1}^{n} P(A | B_i) P(B_i).
+
+Proof. By definition, P(B_j | A) = P(A ∩ B_j)/P(A) = P(A | B_j)P(B_j)/P(A). Substituting the Law of Total Probability for P(A) gives the result. QED.
+
+Bayes' theorem is remarkable because it lets us "reverse" conditional probabilities — we go from P(A | B_j) (the likelihood of the evidence given a hypothesis) to P(B_j | A) (the probability of the hypothesis given the evidence).
+
+Example 4.4.2. Continuing the factory example: if a randomly selected item is found to be defective, what is the probability it came from Machine I?
+
+Solution. P(B_1 | D) = P(D | B_1)P(B_1) / P(D) = (0.03)(0.60) / 0.038 = 0.018 / 0.038 ≈ 0.474. So there is about a 47.4% chance the defective item came from Machine I.
+
+Note that even though Machine I produces more items, Machine II's higher defect rate means Machine II is almost equally likely to be the source of a defect.
+
+Example 4.4.3 (Medical testing). A disease affects 1% of the population. A diagnostic test has 99% sensitivity (true positive rate) and 95% specificity (true negative rate, meaning 5% false positive rate). If a person tests positive, what is the probability they actually have the disease?
+
+Solution. Let D = {has disease}, T+ = {tests positive}. P(D) = 0.01, P(D^c) = 0.99. P(T+ | D) = 0.99, P(T+ | D^c) = 0.05.
+
+By the Law of Total Probability: P(T+) = P(T+ | D)P(D) + P(T+ | D^c)P(D^c) = (0.99)(0.01) + (0.05)(0.99) = 0.0099 + 0.0495 = 0.0594.
+
+By Bayes' Theorem: P(D | T+) = (0.99)(0.01) / 0.0594 = 0.0099 / 0.0594 ≈ 0.167.
+
+Only about 16.7% of people who test positive actually have the disease! This surprising result illustrates the base rate fallacy: when a disease is rare, even a good test produces many false positives relative to true positives.
+
+4.5 Combinatorial Probability
+
+Many probability problems reduce to counting favorable outcomes. The key counting tools are:
+
+Permutations: The number of ways to arrange r objects from n is P(n, r) = n! / (n - r)!.
+
+Combinations: The number of ways to choose r objects from n (order doesn't matter) is C(n, r) = n! / (r!(n - r)!), also written as "n choose r".
+
+Example 4.5.1. A committee of 3 is chosen from 10 people. What is the probability that a specific person (say Alice) is on the committee?
+
+Solution. Total committees: C(10, 3) = 120. Committees containing Alice: C(9, 2) = 36 (choose 2 more from the remaining 9). Probability: 36/120 = 3/10.
+
+Alternatively, the probability that Alice is chosen for any of the 3 spots is 3/10 by symmetry.

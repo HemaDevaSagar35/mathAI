@@ -1,0 +1,80 @@
+Chapter 5: Sequences and Convergence
+
+5.1 Sequences in R
+
+Definition 5.1.1. A sequence of real numbers is a function a: N -> R. We write {a_n} or (a_n)_{n=1}^infty to denote the sequence, where a_n = a(n) is the nth term.
+
+Definition 5.1.2. A sequence {a_n} converges to a limit L in R if for every epsilon > 0, there exists N in N such that |a_n - L| < epsilon for all n >= N. We write lim_{n -> infty} a_n = L or a_n -> L.
+
+A sequence that converges is called convergent; otherwise it is divergent.
+
+Remark. The definition says: no matter how small a tolerance epsilon we choose, eventually (for all n past some threshold N) every term of the sequence lies within epsilon of L. The threshold N typically depends on epsilon — smaller epsilon requires larger N.
+
+Example 5.1.3. Prove that lim_{n -> infty} 1/n = 0.
+
+Proof. Let epsilon > 0. Choose N > 1/epsilon (possible by the Archimedean property). For n >= N: |1/n - 0| = 1/n <= 1/N < epsilon. QED.
+
+Example 5.1.4. Prove that lim_{n -> infty} (3n + 1)/(n + 2) = 3.
+
+Proof. Let epsilon > 0. We compute |(3n + 1)/(n + 2) - 3| = |(3n + 1 - 3n - 6)/(n + 2)| = 5/(n + 2). We need 5/(n + 2) < epsilon, i.e., n > 5/epsilon - 2. Choose N > 5/epsilon - 2. For n >= N: |(3n + 1)/(n + 2) - 3| = 5/(n + 2) < epsilon. QED.
+
+5.2 Properties of Convergent Sequences
+
+Theorem 5.2.1. Every convergent sequence is bounded.
+
+Proof. Suppose a_n -> L. Choose epsilon = 1. There exists N such that |a_n - L| < 1 for all n >= N, so |a_n| < |L| + 1 for n >= N. Let M = max(|a_1|, |a_2|, ..., |a_{N-1}|, |L| + 1). Then |a_n| <= M for all n. QED.
+
+The converse is false: the sequence {(-1)^n} is bounded (between -1 and 1) but divergent.
+
+Theorem 5.2.2 (Algebraic Limit Theorem). Suppose a_n -> a and b_n -> b. Then:
+(i) a_n + b_n -> a + b
+(ii) ca_n -> ca for any constant c
+(iii) a_n * b_n -> a * b
+(iv) a_n / b_n -> a/b provided b != 0 and b_n != 0 for all n
+
+Proof of (iii). Since {a_n} converges, it is bounded: |a_n| <= M for some M > 0. Let epsilon > 0. Choose N_1 such that |a_n - a| < epsilon/(2|b| + 1) for n >= N_1, and N_2 such that |b_n - b| < epsilon/(2M) for n >= N_2. Let N = max(N_1, N_2). For n >= N:
+
+|a_n b_n - ab| = |a_n b_n - a_n b + a_n b - ab|
+                <= |a_n||b_n - b| + |b||a_n - a|
+                < M * epsilon/(2M) + |b| * epsilon/(2|b| + 1)
+                < epsilon/2 + epsilon/2 = epsilon. QED.
+
+5.3 Monotone Convergence Theorem
+
+Definition 5.3.1. A sequence {a_n} is monotonically increasing if a_n <= a_{n+1} for all n, and monotonically decreasing if a_n >= a_{n+1} for all n. A sequence is monotone if it is either monotonically increasing or monotonically decreasing.
+
+Theorem 5.3.2 (Monotone Convergence Theorem). A monotone, bounded sequence converges.
+
+Proof. Suppose {a_n} is increasing and bounded above. Let s = sup{a_n : n in N}, which exists by the completeness of R. We claim a_n -> s.
+
+Let epsilon > 0. Since s is the least upper bound, s - epsilon is not an upper bound, so there exists N with a_N > s - epsilon. Since {a_n} is increasing, for all n >= N: s - epsilon < a_N <= a_n <= s < s + epsilon. Therefore |a_n - s| < epsilon. QED.
+
+Application 5.3.3. The sequence a_1 = 1, a_{n+1} = (a_n + 2/a_n)/2 converges. This is Newton's method for sqrt(2). One can show {a_n} is decreasing for n >= 2 and bounded below by sqrt(2), so by MCT it converges. If L = lim a_n, then L = (L + 2/L)/2, giving L^2 = 2, so L = sqrt(2).
+
+5.4 Subsequences and Bolzano-Weierstrass
+
+Definition 5.4.1. A subsequence of {a_n} is a sequence {a_{n_k}} where n_1 < n_2 < n_3 < ... is a strictly increasing sequence of natural numbers.
+
+Theorem 5.4.2. If a_n -> L, then every subsequence of {a_n} also converges to L.
+
+Proof. Let {a_{n_k}} be a subsequence and epsilon > 0. There exists N such that |a_n - L| < epsilon for all n >= N. Since n_k >= k, for k >= N we have n_k >= N, so |a_{n_k} - L| < epsilon. QED.
+
+Theorem 5.4.3 (Bolzano-Weierstrass). Every bounded sequence in R has a convergent subsequence.
+
+Proof (by nested intervals). Let {a_n} be bounded, say a_n in [A, B] for all n. Bisect [A, B] into [A, (A+B)/2] and [(A+B)/2, B]. At least one half contains infinitely many terms of {a_n}; call it [A_1, B_1] and pick a_{n_1} in it. Bisect [A_1, B_1] and repeat: choose [A_2, B_2] containing infinitely many terms, and pick a_{n_2} with n_2 > n_1. Continue to get nested intervals [A_k, B_k] with B_k - A_k = (B - A)/2^k -> 0. By the Nested Interval Property, the intersection is a single point L. The subsequence {a_{n_k}} converges to L since |a_{n_k} - L| <= B_k - A_k -> 0. QED.
+
+5.5 Cauchy Sequences
+
+Definition 5.5.1. A sequence {a_n} is a Cauchy sequence if for every epsilon > 0, there exists N such that |a_m - a_n| < epsilon for all m, n >= N.
+
+Intuitively, a Cauchy sequence is one whose terms get arbitrarily close to each other — the terms "cluster together" without needing to know what they cluster around.
+
+Theorem 5.5.2. A sequence in R converges if and only if it is a Cauchy sequence.
+
+Proof. (=>) Suppose a_n -> L. Let epsilon > 0. There exists N such that |a_n - L| < epsilon/2 for n >= N. For m, n >= N: |a_m - a_n| <= |a_m - L| + |L - a_n| < epsilon/2 + epsilon/2 = epsilon.
+
+(<=) Suppose {a_n} is Cauchy. First, {a_n} is bounded (take epsilon = 1 to get a bound past some N, then take the max with the finite initial segment). By Bolzano-Weierstrass, {a_n} has a convergent subsequence a_{n_k} -> L. We show a_n -> L.
+
+Let epsilon > 0. There exists N_1 such that |a_m - a_n| < epsilon/2 for m, n >= N_1. There exists K such that |a_{n_k} - L| < epsilon/2 for k >= K. Choose k >= K with n_k >= N_1. For n >= N_1: |a_n - L| <= |a_n - a_{n_k}| + |a_{n_k} - L| < epsilon/2 + epsilon/2 = epsilon. QED.
+
+This theorem is deeply connected to the completeness of R. In fact, the equivalence "every Cauchy sequence converges" is sometimes taken as the definition of completeness for a metric space.

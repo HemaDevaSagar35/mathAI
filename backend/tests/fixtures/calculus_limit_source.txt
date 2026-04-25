@@ -1,0 +1,93 @@
+Chapter 2: Limits and Continuity
+
+2.1 The Concept of a Limit
+
+The notion of a limit is the foundation of calculus. Informally, we say that the limit of f(x) as x approaches a is L if f(x) gets arbitrarily close to L as x gets sufficiently close to a (but not equal to a). We write:
+
+  lim_{x -> a} f(x) = L.
+
+Example 2.1.1. Consider f(x) = (x^2 - 1)/(x - 1) for x != 1. We cannot simply substitute x = 1 because that gives 0/0. However, for x != 1 we can factor: f(x) = (x - 1)(x + 1)/(x - 1) = x + 1. As x approaches 1, x + 1 approaches 2. Therefore lim_{x -> 1} f(x) = 2.
+
+Example 2.1.2. Compute lim_{x -> 3} (2x + 1). Since f(x) = 2x + 1 is a polynomial (continuous everywhere), we can simply substitute: lim_{x -> 3} (2x + 1) = 2(3) + 1 = 7.
+
+Example 2.1.3. Compute lim_{x -> 0} sin(x)/x. This is a fundamental limit in calculus. By the squeeze theorem (which we prove below), using the inequalities cos(x) <= sin(x)/x <= 1 for 0 < |x| < pi/2, and since lim_{x -> 0} cos(x) = 1, we conclude lim_{x -> 0} sin(x)/x = 1.
+
+2.2 The Epsilon-Delta Definition
+
+Definition 2.2.1 (Precise definition of a limit). Let f be a function defined on an open interval containing a, except possibly at a itself. We say
+
+  lim_{x -> a} f(x) = L
+
+if for every epsilon > 0 there exists a delta > 0 such that
+
+  0 < |x - a| < delta  implies  |f(x) - L| < epsilon.
+
+This definition makes precise the idea of "arbitrarily close" — for any tolerance epsilon around L, we can find a neighborhood of radius delta around a such that f maps every point in that neighborhood (except possibly a) into the epsilon-band around L.
+
+Example 2.2.2. Prove that lim_{x -> 2} (3x - 1) = 5 using the epsilon-delta definition.
+
+Proof. Let epsilon > 0 be given. We need |f(x) - L| = |(3x - 1) - 5| = |3x - 6| = 3|x - 2| < epsilon. This holds whenever |x - 2| < epsilon/3. So choose delta = epsilon/3. Then 0 < |x - 2| < delta implies |(3x - 1) - 5| = 3|x - 2| < 3(epsilon/3) = epsilon. QED.
+
+Example 2.2.3. Prove that lim_{x -> 1} x^2 = 1.
+
+Proof. Let epsilon > 0. We need |x^2 - 1| = |x - 1||x + 1| < epsilon. If we restrict |x - 1| < 1, then 0 < x < 2, so |x + 1| < 3. Thus |x^2 - 1| < 3|x - 1|. Choose delta = min(1, epsilon/3). Then |x - 1| < delta implies |x^2 - 1| = |x - 1||x + 1| < (epsilon/3)(3) = epsilon. QED.
+
+2.3 Limit Laws
+
+Theorem 2.3.1 (Limit Laws). Suppose lim_{x -> a} f(x) = L and lim_{x -> a} g(x) = M. Then:
+
+(i) lim_{x -> a} [f(x) + g(x)] = L + M  (Sum Law)
+(ii) lim_{x -> a} [f(x) - g(x)] = L - M  (Difference Law)
+(iii) lim_{x -> a} [cf(x)] = cL for any constant c  (Constant Multiple Law)
+(iv) lim_{x -> a} [f(x) * g(x)] = L * M  (Product Law)
+(v) lim_{x -> a} [f(x)/g(x)] = L/M, provided M != 0  (Quotient Law)
+(vi) lim_{x -> a} [f(x)]^n = L^n for any positive integer n  (Power Law)
+
+Proof of (i). Let epsilon > 0. Since lim f(x) = L, there exists delta_1 > 0 such that |f(x) - L| < epsilon/2 when 0 < |x - a| < delta_1. Since lim g(x) = M, there exists delta_2 > 0 such that |g(x) - M| < epsilon/2 when 0 < |x - a| < delta_2. Let delta = min(delta_1, delta_2). Then for 0 < |x - a| < delta:
+
+  |(f(x) + g(x)) - (L + M)| <= |f(x) - L| + |g(x) - M| < epsilon/2 + epsilon/2 = epsilon. QED.
+
+2.4 The Squeeze Theorem
+
+Theorem 2.4.1 (Squeeze Theorem). If g(x) <= f(x) <= h(x) for all x near a (except possibly at a), and lim_{x -> a} g(x) = lim_{x -> a} h(x) = L, then lim_{x -> a} f(x) = L.
+
+Proof. Let epsilon > 0. There exist delta_1, delta_2 > 0 such that |g(x) - L| < epsilon when 0 < |x - a| < delta_1 and |h(x) - L| < epsilon when 0 < |x - a| < delta_2. Let delta = min(delta_1, delta_2). For 0 < |x - a| < delta:
+
+  L - epsilon < g(x) <= f(x) <= h(x) < L + epsilon,
+
+so |f(x) - L| < epsilon. QED.
+
+Application: We can now rigorously prove lim_{x -> 0} sin(x)/x = 1. The geometric argument using the unit circle gives cos(x) <= sin(x)/x <= 1 for 0 < |x| < pi/2. Since lim_{x -> 0} cos(x) = cos(0) = 1 and lim_{x -> 0} 1 = 1, the Squeeze Theorem gives lim_{x -> 0} sin(x)/x = 1.
+
+2.5 Continuity
+
+Definition 2.5.1. A function f is continuous at a point a if:
+(i) f(a) is defined,
+(ii) lim_{x -> a} f(x) exists, and
+(iii) lim_{x -> a} f(x) = f(a).
+
+f is continuous on an interval I if it is continuous at every point of I.
+
+Theorem 2.5.2. Polynomials are continuous everywhere. Rational functions p(x)/q(x) are continuous wherever q(x) != 0. The functions sin(x), cos(x), e^x, and ln(x) (for x > 0) are all continuous on their domains.
+
+Theorem 2.5.3 (Intermediate Value Theorem). If f is continuous on [a, b] and N is any number between f(a) and f(b), then there exists c in (a, b) such that f(c) = N.
+
+Application: The equation x^5 + x - 1 = 0 has a root in (0, 1). Let f(x) = x^5 + x - 1. Then f(0) = -1 < 0 and f(1) = 1 > 0. Since f is a polynomial (hence continuous), the IVT guarantees a c in (0, 1) with f(c) = 0.
+
+2.6 Worked Examples
+
+Example 2.6.1. Evaluate lim_{x -> 4} (sqrt(x) - 2)/(x - 4).
+
+Solution. Direct substitution gives 0/0. Rationalize the numerator: multiply by (sqrt(x) + 2)/(sqrt(x) + 2).
+
+  (sqrt(x) - 2)/(x - 4) * (sqrt(x) + 2)/(sqrt(x) + 2) = (x - 4)/((x - 4)(sqrt(x) + 2)) = 1/(sqrt(x) + 2).
+
+Therefore lim_{x -> 4} (sqrt(x) - 2)/(x - 4) = 1/(sqrt(4) + 2) = 1/4.
+
+Example 2.6.2. Evaluate lim_{x -> 0} (1 - cos(x))/x^2.
+
+Solution. Using the identity 1 - cos(x) = 2sin^2(x/2):
+
+  (1 - cos(x))/x^2 = 2sin^2(x/2)/x^2 = (1/2)(sin(x/2)/(x/2))^2.
+
+As x -> 0, x/2 -> 0, so sin(x/2)/(x/2) -> 1. Therefore the limit is (1/2)(1)^2 = 1/2.
