@@ -9,6 +9,10 @@ from app.api.routes.books import router as books_router
 from app.api.routes.profiles import router as profiles_router
 from app.api.routes.concepts import router as concepts_router
 from app.api.routes.plans import router as plans_router
+from app.api.routes.lessons import router as lessons_router
+from app.api.routes.quizzes import router as quizzes_router
+from app.api.routes.grading import router as grading_router
+from app.api.routes.progress import router as progress_router
 from app.core.errors import MathPathError, mathpath_error_handler
 from app.core.logging import setup_logging
 from app.core.network import print_local_ip
@@ -38,3 +42,7 @@ app.include_router(books_router, prefix="/api")
 app.include_router(profiles_router, prefix="/api")
 app.include_router(concepts_router, prefix="/api")
 app.include_router(plans_router, prefix="/api")
+app.include_router(lessons_router, prefix="/api")
+app.include_router(quizzes_router, prefix="/api")
+app.include_router(grading_router, prefix="/api")
+app.include_router(progress_router, prefix="/api")
