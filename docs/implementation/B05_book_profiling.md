@@ -4,6 +4,15 @@
 
 **Depends on:** B02 (models), B03 (chunks exist), B04 (LLM client)
 
+> ### Update — structure-aware sampling (added with [B14v2](B14v2_vision_ingestion.md))
+>
+> The original sampling rule (first 5 + middle 3 + last 2 chunks) is still implemented as `BookProfiler._sample_chunks_flat`, but it is now the **fallback**. The active rule is:
+>
+> - **If `BookSection` rows exist for the book** (i.e. it was ingested via the vision-first path), sample **3 chunks per chapter** (first / middle / last of each chapter), capped at 30 chunks total. This guarantees every chapter is represented in the profile, fixes the multi-subject undersampling failure mode, and scales naturally with book length.
+> - **Otherwise** (legacy text ingestion or structure detection produced no chapters), fall back to the original 5-3-2 split unchanged.
+>
+> Everything else in this spec — prompt template, output schema, API endpoints, CLI script — remains accurate. A future follow-up (tracked in B14v2's "Known limitations") will derive `proof_density` / `computation_density` deterministically from the typed-block distribution rather than asking the LLM, making profiling near-free once concepts are extracted.
+
 ---
 
 ## Tasks

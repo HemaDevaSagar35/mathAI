@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,7 +23,10 @@ class Book(Base):
 
 class BookChunk(Base):
     __tablename__ = "book_chunks"
-    __table_args__ = (Index("idx_book_chunks_book_id", "book_id"),)
+    __table_args__ = (
+        Index("idx_book_chunks_book_id", "book_id"),
+        Index("idx_book_chunks_section_id", "section_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     book_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"))
@@ -36,4 +39,17 @@ class BookChunk(Base):
     clean_text: Mapped[str] = mapped_column(Text)
     token_count: Mapped[int] = mapped_column(Integer, default=0)
     embedding_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # --- Vision-ingestion v2 additions (all nullable for backward compat) ---
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("book_sections.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Typed block list emitted by per-page extraction. Each entry is a dict
+    # whose `kind` matches one of the BlockKind variants in
+    # app.schemas.page_extraction. clean_text is still populated as a
+    # text-rendered version of these blocks for backward compatibility.
+    blocks: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    page_kind: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

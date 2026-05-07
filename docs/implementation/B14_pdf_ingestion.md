@@ -1,8 +1,21 @@
-# B14 — PDF Ingestion
+# B14 — PDF Ingestion (legacy text-extraction path)
 
 > **Objective:** Accept PDF file uploads, extract text page-by-page, chunk extracted text with page references, and persist to the database.
 
 **Depends on:** B01 (skeleton), B02 (models), B03 (chunker)
+
+> ### ⚠️ Status: superseded as the recommended path by [B14v2 — Vision-First PDF Ingestion](B14v2_vision_ingestion.md)
+>
+> This milestone is **still implemented and still the default** path because it has zero per-book LLM cost and is sufficient for clean, born-digital, single-subject PDFs. It is no longer the *recommended* path because:
+>
+> - It loses chapter / section structure (chunks are flat).
+> - It mangles math notation (PyMuPDF's text extraction was not built for equations).
+> - It cannot handle scanned or image-based PDFs.
+> - It produces no figure references.
+>
+> For any production use against real-world textbooks, prefer the vision-first path. Switch by setting `VISION_INGESTION_ENABLED=true` in `.env` or by passing `?use_vision=true` to `POST /api/books/upload`. See [B14v2](B14v2_vision_ingestion.md) for the full design.
+>
+> The legacy path described below remains in the codebase as a backwards-compat fallback and as a zero-LLM-cost option for users without a configured vision-capable provider.
 
 ---
 

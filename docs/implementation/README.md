@@ -47,7 +47,8 @@ See [B00_open_source_setup.md](B00_open_source_setup.md) for full details.
 | B11 | Quiz Generation | [B11_quiz_generation.md](B11_quiz_generation.md) | B04, B08, B09 |
 | B12 | Answer Grading | [B12_answer_grading.md](B12_answer_grading.md) | B04, B11 |
 | B13 | Progression & Mastery | [B13_progression_mastery.md](B13_progression_mastery.md) | B12, B08 |
-| B14 | PDF Ingestion | [B14_pdf_ingestion.md](B14_pdf_ingestion.md) | B01, B02, B03 |
+| B14 | PDF Ingestion (legacy, text-only) | [B14_pdf_ingestion.md](B14_pdf_ingestion.md) | B01, B02, B03 |
+| B14v2 | **Vision-First PDF Ingestion** (recommended) | [B14v2_vision_ingestion.md](B14v2_vision_ingestion.md) | B01, B02, B04 |
 | B15 | End-to-End Pipeline | [B15_e2e_pipeline.md](B15_e2e_pipeline.md) | B03–B14 |
 
 ### Frontend (F01–F09)

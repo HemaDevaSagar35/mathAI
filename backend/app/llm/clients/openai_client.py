@@ -1,3 +1,5 @@
+import base64
+
 from openai import AsyncOpenAI
 
 from app.core.config import settings
@@ -7,7 +9,7 @@ from app.llm.clients.base import BaseLLMClient, LLMResponse
 class OpenAIClient(BaseLLMClient):
     provider_name = "openai"
 
-    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+    def __init__(self, model: str, api_key: str | None = None):
         key = api_key or settings.OPENAI_API_KEY
         if not key:
             raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
@@ -20,12 +22,27 @@ class OpenAIClient(BaseLLMClient):
         system: str = "",
         temperature: float = 0.2,
         max_tokens: int = 4096,
+        images: list[bytes] | None = None,
         **kwargs,
     ) -> LLMResponse:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
+
+        if images:
+            user_content: list = []
+            for img in images:
+                b64 = base64.b64encode(img).decode("ascii")
+                user_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{b64}"},
+                    }
+                )
+            user_content.append({"type": "text", "text": prompt})
+            messages.append({"role": "user", "content": user_content})
+        else:
+            messages.append({"role": "user", "content": prompt})
 
         extra = {}
         if kwargs.get("json_mode"):
@@ -52,9 +69,11 @@ class OpenAIClient(BaseLLMClient):
         )
 
     async def generate_json(self, prompt, schema=None, system="", temperature=0.1,
-                            max_tokens=4096, retries=2, task="unknown", **kwargs):
+                            max_tokens=4096, retries=2, task="unknown",
+                            images=None, **kwargs):
         kwargs["json_mode"] = True
         return await super().generate_json(
             prompt, schema=schema, system=system, temperature=temperature,
-            max_tokens=max_tokens, retries=retries, task=task, **kwargs,
+            max_tokens=max_tokens, retries=retries, task=task,
+            images=images, **kwargs,
         )

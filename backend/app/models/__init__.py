@@ -1,5 +1,7 @@
 from app.models.user import User
 from app.models.book import Book, BookChunk
+from app.models.section import BookSection
+from app.models.figure import BookFigure
 from app.models.profile import BookProfile
 from app.models.concept import Concept, ConceptEdge
 from app.models.plan import StudyPlan
@@ -16,6 +18,8 @@ __all__ = [
     "User",
     "Book",
     "BookChunk",
+    "BookSection",
+    "BookFigure",
     "BookProfile",
     "Concept",
     "ConceptEdge",

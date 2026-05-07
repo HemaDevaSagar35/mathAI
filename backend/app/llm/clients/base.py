@@ -41,6 +41,7 @@ class BaseLLMClient(ABC):
         system: str = "",
         temperature: float = 0.2,
         max_tokens: int = 4096,
+        images: list[bytes] | None = None,
         **kwargs,
     ) -> LLMResponse:
         ...
@@ -54,9 +55,14 @@ class BaseLLMClient(ABC):
         max_tokens: int = 4096,
         retries: int = 2,
         task: str = "unknown",
+        images: list[bytes] | None = None,
         **kwargs,
     ) -> dict:
-        """Generate and validate JSON, retrying on parse/validation failure."""
+        """Generate and validate JSON, retrying on parse/validation failure.
+
+        Pass `images=[png_bytes, ...]` to send page images alongside the prompt
+        (vision-capable models only). Each entry must be PNG-encoded bytes.
+        """
         full_system = (system or "") + JSON_SYSTEM_SUFFIX
         last_error = ""
 
@@ -75,6 +81,7 @@ class BaseLLMClient(ABC):
                     system=full_system,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    images=images,
                     **kwargs,
                 )
                 latency = (time.monotonic() - t0) * 1000

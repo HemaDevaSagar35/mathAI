@@ -1,3 +1,5 @@
+import base64
+
 from anthropic import AsyncAnthropic
 
 from app.core.config import settings
@@ -7,7 +9,7 @@ from app.llm.clients.base import BaseLLMClient, LLMResponse
 class AnthropicClient(BaseLLMClient):
     provider_name = "anthropic"
 
-    def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None):
+    def __init__(self, model: str, api_key: str | None = None):
         key = api_key or settings.ANTHROPIC_API_KEY
         if not key:
             raise ValueError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
@@ -20,13 +22,32 @@ class AnthropicClient(BaseLLMClient):
         system: str = "",
         temperature: float = 0.2,
         max_tokens: int = 4096,
+        images: list[bytes] | None = None,
         **kwargs,
     ) -> LLMResponse:
+        if images:
+            user_content: list = []
+            for img in images:
+                user_content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": base64.b64encode(img).decode("ascii"),
+                        },
+                    }
+                )
+            user_content.append({"type": "text", "text": prompt})
+            messages_payload = [{"role": "user", "content": user_content}]
+        else:
+            messages_payload = [{"role": "user", "content": prompt}]
+
         response = await self.client.messages.create(
             model=self.model,
             max_tokens=max_tokens,
             system=system or "You are a helpful assistant.",
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages_payload,
             temperature=temperature,
         )
 
@@ -43,10 +64,12 @@ class AnthropicClient(BaseLLMClient):
         )
 
     async def generate_json(self, prompt, schema=None, system="", temperature=0.1,
-                            max_tokens=4096, retries=2, task="unknown", **kwargs):
+                            max_tokens=4096, retries=2, task="unknown",
+                            images=None, **kwargs):
         # Anthropic trick: prefill assistant with "{" to force JSON output
         kwargs["_anthropic_prefill"] = True
         return await super().generate_json(
             prompt, schema=schema, system=system, temperature=temperature,
-            max_tokens=max_tokens, retries=retries, task=task, **kwargs,
+            max_tokens=max_tokens, retries=retries, task=task,
+            images=images, **kwargs,
         )
