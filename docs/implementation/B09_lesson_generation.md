@@ -82,7 +82,7 @@ class CareNoteGenerator:
 
 For MVP, the main lesson prompt should produce care notes. This service is a fallback.
 
-**Provider recommendation:** Anthropic Claude excels at nuanced, layered explanations. This is one of the most important generation steps — the quality of lessons directly affects the learning experience. Configure via `LLM_TASK_ROUTING`.
+**Provider recommendation:** Anthropic Claude excels at nuanced, layered explanations. This is one of the most important generation steps — the quality of lessons directly affects the learning experience. Configure via `LLM_LESSON_GENERATION_PROVIDER` + `LLM_LESSON_GENERATION_MODEL` in `.env`, or fall back to `LLM_ALL_*`.
 
 **Large JSON output warning:** The lesson schema is large (~15 fields, nested objects). If a smaller/weaker model struggles to produce all fields reliably, consider splitting into 2 LLM calls: (1) core lesson (explanations, examples, formal content), (2) supplementary content (care notes, real-world connections, memory hooks).
 

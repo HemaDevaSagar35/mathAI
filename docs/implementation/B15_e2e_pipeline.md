@@ -32,7 +32,7 @@ python scripts/run_pipeline.py \
   --provider gemini
 ```
 
-The `--provider` flag overrides `settings.LLM_PROVIDER` for the entire run. If omitted, uses the default from `.env`.
+The `--provider` and `--model` flags must be passed together (or neither). When passed, they override the per-task / `LLM_ALL_*` settings for the entire run. When omitted, the orchestrator uses whatever each task resolves to from `.env` (per-task `LLM_<TASK>_*` or the `LLM_ALL_*` global).
 
 The script should:
 

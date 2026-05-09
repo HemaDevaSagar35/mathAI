@@ -4,6 +4,14 @@
 
 **Depends on:** B01 (skeleton), B02 (models)
 
+> ### 🗑️ Status: REMOVED
+>
+> Text ingestion has been removed from the codebase. The application is PDF-only and the multimodal vision pipeline ([B14v2](B14v2_vision_ingestion.md)) is the single ingestion path. Both the `POST /api/books/text` route and the `TextIngestor` service have been deleted.
+>
+> The `BookChunk` token-counter helper (`app/services/ingestion/token_counter.py`) still exists because it's used by the vision postprocessor's chunking logic. Everything else from this milestone (`Chunker`, `TextIngestor`, the `?source_type=text` book variant) is gone.
+>
+> This doc remains as a historical record of the milestone.
+
 ---
 
 ## Tasks

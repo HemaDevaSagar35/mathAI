@@ -4,12 +4,6 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
-class BookCreate(BaseModel):
-    title: str
-    source_type: str = "text"
-    text: str | None = None
-
-
 class BookRead(BaseModel):
     id: UUID
     title: str

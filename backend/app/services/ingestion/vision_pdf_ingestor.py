@@ -43,6 +43,14 @@ DEFAULT_RENDER_DPI = 150
 DEFAULT_FIGURE_DPI = 200
 
 
+def save_upload_file(content: bytes, book_id: uuid.UUID) -> str:
+    """Persist a freshly-uploaded PDF under uploads/{book_id}.pdf and return its path."""
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    path = UPLOAD_DIR / f"{book_id}.pdf"
+    path.write_bytes(content)
+    return str(path)
+
+
 @dataclass
 class VisionIngestResult:
     pages_extracted: int
@@ -208,4 +216,4 @@ def _make_crop_figure(doc: "fitz.Document", *, dpi: int, render_dpi: int):
     return crop
 
 
-__all__ = ["VisionPDFIngestor", "VisionIngestResult"]
+__all__ = ["VisionPDFIngestor", "VisionIngestResult", "save_upload_file"]

@@ -213,11 +213,14 @@ VISION_INGESTION_ENABLED: bool = False   # default off
 VISION_RENDER_DPI: int = 150             # for the structure pass
 VISION_FIGURE_DPI: int = 200             # for figure crops
 VISION_BATCH_SIZE: int = 5
-
-LLM_TASK_ROUTING: dict = {
-    "page_extraction": {"provider": "gemini", "model": "gemini-2.0-flash"},
-}
 ```
+
+**LLM provider for vision** is resolved by `get_llm_client(task="page_extraction")` against the same per-task settings used everywhere else — there is no hardcoded default for `page_extraction`. Either:
+
+- Set `LLM_ALL_PROVIDER` + `LLM_ALL_MODEL` to use one model for everything (vision included), or
+- Set `LLM_PAGE_EXTRACTION_PROVIDER` + `LLM_PAGE_EXTRACTION_MODEL` specifically for the vision pass (e.g. point it at a cheap multimodal model while reasoning tasks use a stronger one).
+
+If neither is configured when an upload runs with `use_vision=true`, `get_llm_client()` raises an explicit error naming the env vars to set.
 
 ### 11. CLI scripts — `scripts/`
 
@@ -302,10 +305,21 @@ Rollback: `alembic downgrade db6f1536ede4` drops the new tables and columns. Any
 To switch a deployment to vision-first ingestion:
 
 ```bash
-# .env
+# .env — option 1: one model for everything (simplest)
 VISION_INGESTION_ENABLED=true
-GEMINI_API_KEY=...                       # vision-default provider
-LLM_TASK_ROUTING='{"page_extraction": {"provider": "gemini", "model": "gemini-2.0-flash"}}'
+LLM_ALL_PROVIDER=gemini
+LLM_ALL_MODEL=gemini-2.0-flash
+GEMINI_API_KEY=...
+
+# .env — option 2: cheap vision, strong reasoning elsewhere
+VISION_INGESTION_ENABLED=true
+LLM_PAGE_EXTRACTION_PROVIDER=gemini
+LLM_PAGE_EXTRACTION_MODEL=gemini-2.0-flash
+LLM_BOOK_PROFILING_PROVIDER=openai
+LLM_BOOK_PROFILING_MODEL=gpt-4o
+# ... per-task pairs for the other stages you call ...
+GEMINI_API_KEY=...
+OPENAI_API_KEY=...
 ```
 
 Existing books ingested via the legacy text path remain valid. New uploads use the vision pipeline.
@@ -357,8 +371,10 @@ remark, equation, figure, table, list, exercise) in one call.
    BookSection rows exist; fall back to the legacy 5-3-2 sample otherwise.
 
 9) Add ?use_vision=true to POST /api/books/upload, and a
-   VISION_INGESTION_ENABLED setting (default false). Add LLM_TASK_ROUTING
-   default for "page_extraction" → gemini-2.0-flash.
+   VISION_INGESTION_ENABLED setting (default false). The vision LLM is
+   resolved through the standard per-task config
+   (LLM_PAGE_EXTRACTION_PROVIDER + LLM_PAGE_EXTRACTION_MODEL, or
+   LLM_ALL_*); no hardcoded provider/model.
 
 10) CLI scripts: scripts/test_page_extract.py (no-DB smoke test) and
     scripts/inspect_structure.py (print BookSection tree + chunk stats).

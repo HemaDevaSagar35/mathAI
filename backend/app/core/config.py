@@ -72,10 +72,8 @@ class Settings(BaseSettings):
     LLM_ANSWER_GRADING_PROVIDER: str | None = None
     LLM_ANSWER_GRADING_MODEL: str | None = None
 
-    # ===== Vision-first PDF ingestion (B14v2) =====
-    # When false, /api/books/upload uses the legacy text-extraction PDF path.
-    # When true, the upload route runs the multimodal page extractor.
-    VISION_INGESTION_ENABLED: bool = False
+    # ===== Vision PDF ingestion =====
+    # The only ingestion path. Tunable knobs for render quality and batch size.
     VISION_RENDER_DPI: int = 150
     VISION_FIGURE_DPI: int = 200
     VISION_BATCH_SIZE: int = 5

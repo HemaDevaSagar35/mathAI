@@ -86,7 +86,7 @@ Chunk sampling strategy: Use diverse chunks from the beginning, middle, and end 
 
 **Token budget awareness:** Sampling 10 chunks at ~800 tokens each = ~8K tokens of source. Plus prompt overhead, expect ~10K input tokens per profiling call. This is cheap across all providers.
 
-**Provider recommendation:** Gemini 2.0 Flash is ideal here — fast, cheap, and handles large context well. Configure via `LLM_TASK_ROUTING` in settings.
+**Provider recommendation:** A fast, cheap multimodal/long-context model (e.g. Gemini Flash) is ideal here. Configure via `LLM_BOOK_PROFILING_PROVIDER` + `LLM_BOOK_PROFILING_MODEL` in `.env`, or fall back to `LLM_ALL_*`.
 
 ### 4. API endpoint — `app/api/routes/profiles.py`
 

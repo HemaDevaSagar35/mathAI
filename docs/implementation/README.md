@@ -36,10 +36,10 @@ See [B00_open_source_setup.md](B00_open_source_setup.md) for full details.
 |---|-----------|------|------------|
 | B01 | Project Skeleton | [B01_project_skeleton.md](B01_project_skeleton.md) | B00 |
 | B02 | Data Models & Migrations | [B02_data_models.md](B02_data_models.md) | B01 |
-| B03 | Text Ingestion | [B03_text_ingestion.md](B03_text_ingestion.md) | B01, B02 |
+| ~~B03~~ | ~~Text Ingestion~~ — **removed** (PDF-only) | [B03_text_ingestion.md](B03_text_ingestion.md) | — |
 | B04 | LLM Client Abstraction | [B04_llm_abstraction.md](B04_llm_abstraction.md) | B01 |
-| B05 | Book Profiling | [B05_book_profiling.md](B05_book_profiling.md) | B02, B03, B04 |
-| B06 | Concept Extraction | [B06_concept_extraction.md](B06_concept_extraction.md) | B02, B03, B04, B05 |
+| B05 | Book Profiling | [B05_book_profiling.md](B05_book_profiling.md) | B02, B04, B14v2 |
+| B06 | Concept Extraction | [B06_concept_extraction.md](B06_concept_extraction.md) | B02, B04, B05, B14v2 |
 | B07 | Concept Graph | [B07_concept_graph.md](B07_concept_graph.md) | B06 |
 | B08 | Tidbit Planner | [B08_tidbit_planner.md](B08_tidbit_planner.md) | B05, B06, B07 |
 | B09 | Lesson Generation | [B09_lesson_generation.md](B09_lesson_generation.md) | B04, B08 |
@@ -47,9 +47,9 @@ See [B00_open_source_setup.md](B00_open_source_setup.md) for full details.
 | B11 | Quiz Generation | [B11_quiz_generation.md](B11_quiz_generation.md) | B04, B08, B09 |
 | B12 | Answer Grading | [B12_answer_grading.md](B12_answer_grading.md) | B04, B11 |
 | B13 | Progression & Mastery | [B13_progression_mastery.md](B13_progression_mastery.md) | B12, B08 |
-| B14 | PDF Ingestion (legacy, text-only) | [B14_pdf_ingestion.md](B14_pdf_ingestion.md) | B01, B02, B03 |
-| B14v2 | **Vision-First PDF Ingestion** (recommended) | [B14v2_vision_ingestion.md](B14v2_vision_ingestion.md) | B01, B02, B04 |
-| B15 | End-to-End Pipeline | [B15_e2e_pipeline.md](B15_e2e_pipeline.md) | B03–B14 |
+| ~~B14~~ | ~~PDF Ingestion (legacy, text-only)~~ — **removed** | [B14_pdf_ingestion.md](B14_pdf_ingestion.md) | — |
+| **B14v2** | **Vision-First PDF Ingestion** (the only ingestion path) | [B14v2_vision_ingestion.md](B14v2_vision_ingestion.md) | B01, B02, B04 |
+| B15 | End-to-End Pipeline | [B15_e2e_pipeline.md](B15_e2e_pipeline.md) | B14v2 + B05–B13 |
 
 ### Frontend (F01–F09)
 

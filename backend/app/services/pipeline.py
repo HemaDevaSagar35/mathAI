@@ -36,7 +36,7 @@ class PipelineOrchestrator:
 
         chunk_count = db.query(BookChunk).filter(BookChunk.book_id == book_id).count()
         if chunk_count == 0:
-            result["errors"].append("No chunks found. Ingest text or upload a PDF first.")
+            result["errors"].append("No chunks found. Upload a PDF first via POST /api/books/upload.")
             return result
         result["chunks"] = chunk_count
 

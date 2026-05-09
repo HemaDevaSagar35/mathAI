@@ -4,6 +4,14 @@
 
 **Depends on:** B01 (skeleton)
 
+> ⚠️ **Update — config model replaced.** The `LLM_PROVIDER` / `LLM_MODEL` / `LLM_TASK_ROUTING` JSON-dict scheme described below has been removed. There are now **no hardcoded defaults** anywhere (no `gpt-4o`, no `claude-sonnet-4-…`, no `gemini-2.0-flash` fallbacks in clients or factory). The current model:
+>
+> - **`LLM_ALL_PROVIDER` + `LLM_ALL_MODEL`** — if both set, used for every task.
+> - **Per-task pair** `LLM_<TASK>_PROVIDER` + `LLM_<TASK>_MODEL` — used when `LLM_ALL_*` is not set. Each task you actually call must have its own pair.
+> - `get_llm_client(task=...)` raises an explicit, copy-paste-able error if neither is configured for a called task. Explicit `provider`+`model` args still win when both are passed.
+>
+> Tasks today: `page_extraction`, `book_profiling`, `concept_extraction`, `concept_dedup`, `concept_graph`, `tidbit_planning`, `lesson_generation`, `proof_ladder`, `quiz_generation`, `answer_grading`. See `.env.example` and `app/llm/clients/__init__.py` for the canonical resolution code. The factory and `Settings` snippets later in this doc reflect the **historical** B04 design, kept for reference; everything else (provider clients, retry, JSON validation, vision/`images=` support) is unchanged.
+
 ---
 
 ## Architecture
