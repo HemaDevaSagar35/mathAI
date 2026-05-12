@@ -2,10 +2,19 @@
 
 Walks a list of `PageExtraction`s (from `PageExtractor`) page by page,
 maintaining a stack of currently-open sections. Each `structure_event`
-pushes/pops the stack and creates a `BookSection` row. Each page's blocks
-are grouped into `BookChunk` rows attached to the deepest currently-open
-section. `figure` blocks have their bbox cropped from the rendered page
-image (via an injected `crop_figure` callable) and stored as `BookFigure`
+pushes/pops the stack and creates a `BookSection` row.
+
+Section boundaries within a page are resolved by matching each
+`structure_event` to the corresponding `heading` block in the page's
+block stream (boundary refinement — see `_split_page_by_events`).
+Blocks before the matched heading are attributed to the previously
+open section and extend its `page_end`; blocks from the matched heading
+onward are attributed to the newly opened section. This prevents a
+section that ends partway through a page from spilling the rest of
+that page's content into the next section.
+
+`figure` blocks have their bbox cropped from the rendered page image
+(via an injected `crop_figure` callable) and stored as `BookFigure`
 rows pointing to a PNG saved on disk.
 
 Backward compatibility: every chunk we produce also gets a `clean_text`
@@ -15,6 +24,7 @@ continue to work without modification.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,6 +36,8 @@ from app.models.book import Book, BookChunk
 from app.models.figure import BookFigure
 from app.models.section import BookSection
 from app.schemas.page_extraction import (
+    Block,
+    HeadingBlock,
     PageExtraction,
     StructureEvent,
     page_kind_is_chunkable,
@@ -107,47 +119,68 @@ class StructurePostprocessor:
             if page.confidence < 0.5:
                 result.low_confidence_pages.append(page.page)
 
-            for event in page.structure_events:
-                section = self._open_section(
-                    db=db,
-                    book_id=book_id,
-                    event=event,
-                    page=page.page,
-                    stack=section_stack,
-                    sibling_counter=sibling_counter,
-                )
-                if section is not None:
-                    result.sections_created += 1
-
-            self._extend_section_page_end(section_stack, page.page)
-
+            # Non-chunkable pages (frontmatter, TOC, references, ...) still
+            # need their structure events recorded so any section starts
+            # printed on them populate the section tree.
             if not page_kind_is_chunkable(page.page_kind):
+                for event in page.structure_events:
+                    section = self._open_section(
+                        db=db,
+                        book_id=book_id,
+                        event=event,
+                        page=page.page,
+                        stack=section_stack,
+                        sibling_counter=sibling_counter,
+                    )
+                    if section is not None:
+                        result.sections_created += 1
+                self._extend_section_page_end(section_stack, page.page)
                 result.pages_skipped_unchunkable += 1
                 continue
 
-            current_section = section_stack[-1].row if section_stack else None
-
-            chunks_for_page = self._chunks_from_blocks(
-                blocks=[b.model_dump() for b in page.blocks],
+            # Chunkable page: split block stream at section boundaries, route
+            # each slice to its proper section. Opens sections as a side effect.
+            segments = self._split_page_by_events(
+                db=db,
                 book_id=book_id,
-                section=current_section,
-                page=page.page,
-                page_kind=page.page_kind,
-                confidence=page.confidence,
-                start_index=next_chunk_index,
+                page=page,
+                stack=section_stack,
+                sibling_counter=sibling_counter,
+                result=result,
             )
-            for chunk in chunks_for_page:
-                db.add(chunk)
-            db.flush()  # so figure rows can FK chunk.id below
-            next_chunk_index += len(chunks_for_page)
-            result.chunks_created += len(chunks_for_page)
+
+            # Newly opened sections + ancestors get page_end bumped to this page.
+            # (Sections popped during _split_page_by_events were already bumped
+            # there if pre-heading blocks on this page belonged to them.)
+            self._extend_section_page_end(section_stack, page.page)
+
+            chunks_for_page: list[BookChunk] = []
+            for section_row, blocks_slice in segments:
+                if not blocks_slice:
+                    continue
+                chunks = self._chunks_from_blocks(
+                    blocks=[b.model_dump() for b in blocks_slice],
+                    book_id=book_id,
+                    section=section_row,
+                    page=page.page,
+                    page_kind=page.page_kind,
+                    confidence=page.confidence,
+                    start_index=next_chunk_index,
+                )
+                for chunk in chunks:
+                    db.add(chunk)
+                if chunks:
+                    db.flush()  # so figure rows below can FK chunk.id
+                next_chunk_index += len(chunks)
+                result.chunks_created += len(chunks)
+                chunks_for_page.extend(chunks)
 
             if crop_figure is not None and figures_dir is not None:
                 figs = self._save_figures(
                     db=db,
                     book_id=book_id,
                     page=page,
-                    section=current_section,
+                    section=section_stack[-1].row if section_stack else None,
                     chunks=chunks_for_page,
                     crop_figure=crop_figure,
                     figures_dir=figures_dir,
@@ -160,6 +193,101 @@ class StructurePostprocessor:
 
         db.commit()
         return result
+
+    # --------------------------------------------------------------- boundary fix
+
+    def _split_page_by_events(
+        self,
+        db: Session,
+        book_id: uuid.UUID,
+        page: PageExtraction,
+        stack: list[_OpenSection],
+        sibling_counter: dict[uuid.UUID | None, int],
+        result: StructureProcessResult,
+    ) -> list[tuple[BookSection | None, list[Block]]]:
+        """Split a page's blocks at section-boundary headings.
+
+        For each `structure_event` on the page, find the corresponding `heading`
+        block in the page's block stream by normalized title match. The matched
+        heading's index is the split point — blocks before it stay with the
+        previously open section (and extend its `page_end` to this page); from
+        the matched heading onward, blocks are attributed to the newly opened
+        section. Events are processed in input order; once a heading is matched,
+        the search for the next event starts after it.
+
+        Side effects: opens new BookSection rows via `_open_section` (which
+        also mutates `stack` and `sibling_counter`), and bumps the
+        previously-deepest section's `page_end` when applicable.
+
+        Returns a list of `(section, blocks_slice)` tuples in reading order,
+        where `section` is None only when there is no chapter open yet (e.g.
+        body content before the first chapter heading).
+        """
+        blocks: list[Block] = list(page.blocks)
+        events: list[StructureEvent] = list(page.structure_events)
+
+        # 1. Match each event to a heading-block index.
+        matches: list[tuple[StructureEvent, int]] = []
+        cursor = 0
+        for ev in events:
+            idx = _find_heading_index(blocks, ev, start=cursor)
+            if idx is None:
+                # The LLM said this section started on the page but no heading
+                # block carries the title. Fall back to "from current cursor
+                # onward" — same behavior as the legacy postprocessor for this
+                # event, but still respects any earlier successful match.
+                logger.warning(
+                    "page %d: structure_event %r (%s) had no matching heading "
+                    "block; falling back to cursor=%d",
+                    page.page,
+                    ev.title,
+                    ev.kind,
+                    cursor,
+                )
+                idx = cursor
+            matches.append((ev, idx))
+            cursor = idx + 1
+
+        segments: list[tuple[BookSection | None, list[Block]]] = []
+
+        if not matches:
+            # No transitions on this page — every block belongs to whatever's
+            # currently open at the top of the stack.
+            if blocks:
+                segments.append((stack[-1].row if stack else None, blocks))
+            return segments
+
+        # 2. Blocks before the first matched heading belong to the section
+        #    currently on top of the stack (the section that's ending mid-page).
+        first_idx = matches[0][1]
+        if first_idx > 0:
+            pre_section = stack[-1].row if stack else None
+            if pre_section is not None:
+                # Bump the closing section + its ancestors so their page_end
+                # reflects that content on this page belongs to them.
+                for entry in stack:
+                    if entry.row.page_end is None or entry.row.page_end < page.page:
+                        entry.row.page_end = page.page
+            segments.append((pre_section, blocks[0:first_idx]))
+
+        # 3. For each event, open the section, then take blocks from its
+        #    heading index up to the next event's heading (or end of page).
+        for i, (ev, idx) in enumerate(matches):
+            section = self._open_section(
+                db=db,
+                book_id=book_id,
+                event=ev,
+                page=page.page,
+                stack=stack,
+                sibling_counter=sibling_counter,
+            )
+            if section is not None:
+                result.sections_created += 1
+            next_idx = matches[i + 1][1] if i + 1 < len(matches) else len(blocks)
+            if idx < next_idx:
+                segments.append((section, blocks[idx:next_idx]))
+
+        return segments
 
     # ------------------------------------------------------------------ sections
 
@@ -412,6 +540,79 @@ class StructurePostprocessor:
             db.add(row)
             count += 1
         return count
+
+
+# --- Heading <-> StructureEvent matching ------------------------------------
+
+# Strip leading "Chapter N", "Section N.M", "Appendix A:", etc.
+_TITLE_PREFIX_RE = re.compile(
+    r"^(chapter|section|subsection|appendix|part)\s+[\w.\-]*[:.\-]?\s*",
+    re.IGNORECASE,
+)
+# Strip leading numbering like "2.", "3.1.4", "2 ", "(IV)" before the title.
+_LEADING_NUMBER_RE = re.compile(
+    r"^[\(]?[\dIVXLCM]+(\.[\dIVXLCM]+)*[\.\:\)\-\s]+",
+    re.IGNORECASE,
+)
+
+
+def _normalize_title(text: str) -> str:
+    """Lowercase, strip leading numbering / prefixes, collapse punctuation+whitespace."""
+    if not text:
+        return ""
+    s = text.lower().strip()
+    s = _TITLE_PREFIX_RE.sub("", s)
+    s = _LEADING_NUMBER_RE.sub("", s)
+    s = re.sub(r"[^\w\s]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _find_heading_index(
+    blocks: list[Block], event: StructureEvent, start: int = 0
+) -> int | None:
+    """Find the index of a `heading` block (>= `start`) that matches `event`.
+
+    Match strategy, in order:
+      1. Exact match on normalized title text.
+      2. One side's tokens are a subset of the other's (e.g. event title
+         'Examples' vs heading text '2 Examples' — after normalization both
+         reduce to 'examples', so this case usually falls under (1), but
+         this catches things like 'KL Divergence' vs 'Kullback-Leibler
+         Divergence' or appendix titles where the LLM dropped or added a word).
+
+    Returns None when no heading block from `start` onward looks like this event.
+    """
+    # The `event.number` field (e.g. '2' for "2 Examples") is intentionally
+    # ignored: _normalize_title strips leading numbering from the heading
+    # text on the other side, so both reduce to the same normalized form.
+    target = _normalize_title(event.title or "")
+    if not target:
+        return None
+
+    target_tokens = set(target.split())
+
+    # Pass 1: exact normalized equality.
+    for i in range(start, len(blocks)):
+        b = blocks[i]
+        if not isinstance(b, HeadingBlock):
+            continue
+        if _normalize_title(b.text) == target:
+            return i
+
+    # Pass 2: token containment (each side has >= 2 tokens to avoid trivial matches).
+    if len(target_tokens) >= 2:
+        for i in range(start, len(blocks)):
+            b = blocks[i]
+            if not isinstance(b, HeadingBlock):
+                continue
+            other_tokens = set(_normalize_title(b.text).split())
+            if not other_tokens:
+                continue
+            if target_tokens.issubset(other_tokens) or other_tokens.issubset(target_tokens):
+                return i
+
+    return None
 
 
 def _chapter_title_of(section: BookSection | None) -> str | None:
