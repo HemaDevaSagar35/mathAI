@@ -535,7 +535,11 @@ class StructurePostprocessor:
                 page=page.page,
                 image_url=str(path),
                 caption=blk.caption,
-                bbox_json={"bbox": blk.bbox},
+                # Tag the format so future migrations can disambiguate legacy
+                # rows (no `format` key -> old [x, y, w, h] pixel coords) from
+                # current rows (Gemini-native [ymin, xmin, ymax, xmax] in
+                # [0, 1000] normalized page coords).
+                bbox_json={"bbox": list(blk.bbox), "format": "gemini_norm_1000"},
             )
             db.add(row)
             count += 1

@@ -117,20 +117,58 @@ class EquationBlock(_BaseBlock):
     latex: str
 
 
+# BBox convention (Gemini-native grounding format):
+#   [ymin, xmin, ymax, xmax], all in [0, 1000] normalized page coordinates.
+#   (0, 0) is the page's top-left corner, (1000, 1000) is the bottom-right.
+#   Y comes first (matches Gemini's grounding output convention).
 BBox = Annotated[list[float], Field(min_length=4, max_length=4)]
+
+
+def _validate_bbox(value: object) -> list[float]:
+    """Clip bbox values into [0, 1000] and require a non-degenerate region.
+
+    Pydantic calls us before the field's own min/max-length check, so we just
+    forward bad shapes through and let pydantic raise its own clearer error.
+    """
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return value  # type: ignore[return-value]
+    try:
+        ymin, xmin, ymax, xmax = (float(v) for v in value)
+    except (TypeError, ValueError):
+        return value  # type: ignore[return-value]
+    ymin = max(0.0, min(1000.0, ymin))
+    xmin = max(0.0, min(1000.0, xmin))
+    ymax = max(0.0, min(1000.0, ymax))
+    xmax = max(0.0, min(1000.0, xmax))
+    if ymax <= ymin or xmax <= xmin:
+        raise ValueError(
+            f"bbox is degenerate after clipping to [0,1000]: "
+            f"ymin={ymin}, xmin={xmin}, ymax={ymax}, xmax={xmax}"
+        )
+    return [ymin, xmin, ymax, xmax]
 
 
 class FigureBlock(_BaseBlock):
     kind: Literal["figure"] = "figure"
     caption: str | None = None
-    bbox: BBox  # [x, y, width, height] in image pixel coords (origin top-left)
+    bbox: BBox  # [ymin, xmin, ymax, xmax] in [0, 1000] normalized page coords
+
+    @field_validator("bbox", mode="before")
+    @classmethod
+    def _check_bbox(cls, value):
+        return _validate_bbox(value)
 
 
 class TableBlock(_BaseBlock):
     kind: Literal["table"] = "table"
     caption: str | None = None
-    bbox: BBox
+    bbox: BBox  # [ymin, xmin, ymax, xmax] in [0, 1000] normalized page coords
     markdown: str | None = None
+
+    @field_validator("bbox", mode="before")
+    @classmethod
+    def _check_bbox(cls, value):
+        return _validate_bbox(value)
 
 
 class ListBlock(_BaseBlock):

@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 5
 DEFAULT_MAX_CONCURRENCY = 3
-DEFAULT_MAX_TOKENS = 8192
+# Bumped from 8192: dense textbook batches (5 pages of math + LaTeX) regularly
+# blew past 8K output tokens, causing Gemini to truncate JSON mid-page and the
+# entire batch's pydantic validation to throw — wiping all 5 pages' content.
+# 24576 leaves comfortable headroom on Gemini 2.5 Flash (32K out) while still
+# giving us a hard ceiling.
+DEFAULT_MAX_TOKENS = 24576
 LOW_CONFIDENCE_THRESHOLD = 0.5
 
 
@@ -84,25 +89,15 @@ class PageExtractor:
             try:
                 extraction = await self._extract_batch(batch, current_path)
             except Exception as exc:
-                logger.exception(
-                    "page extraction failed for batch %d (pages %s): %s",
+                logger.warning(
+                    "page extraction failed for batch %d (pages %s): %s — "
+                    "retrying pages individually",
                     batch_index,
                     [p.page for p in batch],
                     exc,
                 )
-                # Emit empty placeholders so caller still has a per-page result.
-                extraction = PageBatchExtraction(
-                    pages=[
-                        PageExtraction(
-                            page=p.page,
-                            page_kind="body",
-                            structure_events=[],
-                            blocks=[],
-                            confidence=0.0,
-                            notes=f"extraction failed: {exc!s}"[:500],
-                        )
-                        for p in batch
-                    ]
+                extraction = await self._retry_pages_individually(
+                    batch, current_path
                 )
 
             results.extend(extraction.pages)
@@ -123,6 +118,47 @@ class PageExtractor:
                 )
 
         return results
+
+    async def _retry_pages_individually(
+        self, batch: list[PageInput], current_path: list[str]
+    ) -> PageBatchExtraction:
+        """Re-issue the LLM call one page at a time after a batch failure.
+
+        This isolates the truncation/validation blast radius: a single dense
+        page can no longer take down its 4 neighbors. Section-path continuity
+        is updated as we go so a successful early page in the batch still
+        informs subsequent pages.
+        """
+        recovered: list[PageExtraction] = []
+        running_path = list(current_path)
+        for page_input in batch:
+            try:
+                single = await self._extract_batch([page_input], running_path)
+            except Exception as exc:
+                logger.exception(
+                    "individual retry also failed for page %d: %s",
+                    page_input.page,
+                    exc,
+                )
+                recovered.append(
+                    PageExtraction(
+                        page=page_input.page,
+                        page_kind="body",
+                        structure_events=[],
+                        blocks=[],
+                        confidence=0.0,
+                        notes=f"extraction failed (retry): {exc!s}"[:500],
+                    )
+                )
+                continue
+
+            recovered.extend(single.pages)
+            for page_result in single.pages:
+                running_path = section_path_after(
+                    running_path, page_result.structure_events
+                )
+
+        return PageBatchExtraction(pages=recovered)
 
     async def _extract_batch(
         self, batch: list[PageInput], current_path: list[str]

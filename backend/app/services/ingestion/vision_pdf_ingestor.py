@@ -41,6 +41,13 @@ logger = logging.getLogger(__name__)
 UPLOAD_DIR = Path("uploads")
 DEFAULT_RENDER_DPI = 150
 DEFAULT_FIGURE_DPI = 200
+# Pad each side of an LLM-supplied bbox by this fraction of the page dimension.
+# Vision LLMs return tight (and slightly imprecise) boxes; a moderate pad keeps
+# us from clipping panel labels, figure captions, or top edges that the model
+# under-shoots by 1–2%. 0.025 = ~21 PDF points = ~2 lines of body text on a
+# US-Letter page rendered at 150 DPI. Bump down if body prose starts bleeding
+# into figure crops; bump up if sub-captions are still being clipped.
+DEFAULT_BBOX_PAD_FRAC = 0.025
 
 
 def save_upload_file(content: bytes, book_id: uuid.UUID) -> str:
@@ -105,7 +112,7 @@ class VisionPDFIngestor:
             )
             extractions = await self.page_extractor.extract(page_inputs)
 
-            crop_figure = _make_crop_figure(doc, dpi=self.figure_dpi, render_dpi=self.render_dpi)
+            crop_figure = _make_crop_figure(doc, dpi=self.figure_dpi)
 
             structure = self.postprocessor.process(
                 db=db,
@@ -179,15 +186,20 @@ class VisionPDFIngestor:
         return titles
 
 
-def _make_crop_figure(doc: "fitz.Document", *, dpi: int, render_dpi: int):
+def _make_crop_figure(
+    doc: "fitz.Document",
+    *,
+    dpi: int,
+    pad_frac: float = DEFAULT_BBOX_PAD_FRAC,
+):
     """Build a `(page, bbox) -> png_bytes` callable that crops figures.
 
-    `bbox` is in image pixel coordinates of the page rendered at `render_dpi`
-    (origin top-left, [x, y, width, height]). We convert back to PDF point
-    coordinates (1/72 inch) and re-render the clipped region at `dpi`.
+    `bbox` is in **Gemini-native grounding format**: `[ymin, xmin, ymax, xmax]`
+    in `[0, 1000]` normalized page coordinates (origin top-left, y first).
+    We map this to PDF points using the page's actual size, expand by
+    `pad_frac` of the page dimension on each side (vision LLMs return tight
+    boxes), then re-render the clipped region at `dpi` for high-quality output.
     """
-
-    scale = 72.0 / render_dpi
 
     def crop(page_number: int, bbox: list[float]) -> bytes:
         if page_number < 1 or page_number > doc.page_count:
@@ -195,17 +207,25 @@ def _make_crop_figure(doc: "fitz.Document", *, dpi: int, render_dpi: int):
         if len(bbox) != 4:
             raise ValueError(f"bbox must have 4 elements, got {bbox!r}")
 
-        x, y, w, h = bbox
-        x0 = max(0.0, x) * scale
-        y0 = max(0.0, y) * scale
-        x1 = (x + max(0.0, w)) * scale
-        y1 = (y + max(0.0, h)) * scale
+        ymin, xmin, ymax, xmax = bbox
 
         page = doc[page_number - 1]
         page_rect = page.rect
-        # Clip into the page rect to defend against bbox bleed-over.
-        x1 = min(x1, page_rect.width)
-        y1 = min(y1, page_rect.height)
+
+        # Normalized [0, 1000] -> PDF points using the actual page size.
+        x0 = (xmin / 1000.0) * page_rect.width
+        y0 = (ymin / 1000.0) * page_rect.height
+        x1 = (xmax / 1000.0) * page_rect.width
+        y1 = (ymax / 1000.0) * page_rect.height
+
+        # Defensive padding (then clip into the page rect).
+        pad_x = page_rect.width * pad_frac
+        pad_y = page_rect.height * pad_frac
+        x0 = max(0.0, x0 - pad_x)
+        y0 = max(0.0, y0 - pad_y)
+        x1 = min(page_rect.width, x1 + pad_x)
+        y1 = min(page_rect.height, y1 + pad_y)
+
         if x1 <= x0 or y1 <= y0:
             raise ValueError(f"degenerate bbox after clipping: {bbox!r}")
 

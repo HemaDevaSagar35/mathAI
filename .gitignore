@@ -17,3 +17,6 @@ venv/
 
 # Uploads
 uploads/
+
+# Jupyter
+.ipynb_checkpoints/

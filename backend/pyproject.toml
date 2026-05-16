@@ -24,3 +24,9 @@ dependencies = [
 
 [tool.uv]
 python-preference = "managed"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+]
